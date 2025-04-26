@@ -1,12 +1,12 @@
 import express from 'express';
-import bodyParser from 'body-parser';
+import { json } from 'body-parser';
+
+import healthRouter from './routes/health';
 
 const app = express();
 
-app.use(bodyParser.json());
+app.use(json());
 
-app.get('/', (req, res) => {
-  res.send('hy! api-votacao-bbb is running :)');
-});
+app.use('/health', healthRouter);
 
 export default app;
