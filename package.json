@@ -1,17 +1,25 @@
 {
   "name": "eda-votacao-bbb25",
   "version": "1.0.0",
-  "description": "foco em alta performance, robustez, testes e boas práticas",
-  "main": "apps/api/src/index.ts",
+  "private": true,
+  "workspaces": [
+    "apps/api",
+    "apps/worker"
+  ],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "tsc",
-    "start": "node dist/apps/api/src/index.js",
-    "dev": "nodemon --watch src --exec ts-node apps/api/src/index.ts"
+    "start:api": "npm --workspace apps/api run start",
+    "dev:api": "npm --workspace apps/api run dev",
+    "build:api": "npm --workspace apps/api run build",
+    "test:api": "npm --workspace apps/api run test",
+
+    "start:worker": "npm --workspace apps/worker run start",
+    "dev:worker": "npm --workspace apps/worker run dev",
+    "build:worker": "npm --workspace apps/worker run build",
+    "test:worker": "npm --workspace apps/worker run test",
+
+    "build": "npm run build:api && npm run build:worker",
+    "test": "npm run test:api && npm run test:worker"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
     "amqplib": "^0.10.7",
     "express": "^5.1.0"
