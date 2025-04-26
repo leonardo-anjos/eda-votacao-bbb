@@ -1,12 +1,13 @@
 import express from 'express';
-import { json } from 'body-parser';
 
 import healthRouter from './routes/health';
+import voteRouter from './routes/vote';
 
 const app = express();
 
-app.use(json());
+app.use(express.json());
 
 app.use('/health', healthRouter);
+app.use('/vote', voteRouter);
 
 export default app;
