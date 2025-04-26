@@ -1,5 +1,6 @@
-const sayHello = (name: string): void => {
-  console.log(`Hello, ${name}!`);
-};
+import app from './app';
+const PORT = process.env.PORT || 3000;
 
-sayHello("World");
+app.listen(PORT, () => {
+  console.log(`api-votacao-bbb listening on port ${PORT}`);
+});
