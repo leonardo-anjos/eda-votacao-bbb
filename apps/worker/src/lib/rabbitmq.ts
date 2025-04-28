@@ -1,50 +1,41 @@
-import amqp, { Channel, Connection } from 'amqplib'
-
-let connection: Connection
-let channel: Channel
+import amqp, { Connection, Channel, Message } from 'amqplib'
 
 const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://localhost'
+const QUEUE_NAME = process.env.RABBITMQ_QUEUE_NAME || 'votes'
 
-export async function connectRabbitMQ() {
-  if (connection && channel) {
-    return { connection, channel }
+export async function createConnection(): Promise<Connection> {
+  try {
+    const connection = await amqp.connect(RABBITMQ_URL)
+    console.log('Connected to RabbitMQ')
+    return connection
+  } catch (error) {
+    console.error('Failed to connect to RabbitMQ:', error)
+    throw new Error('Failed to connect to RabbitMQ')
   }
-
-  connection = await amqp.connect(RABBITMQ_URL)
-  channel = await connection.createChannel()
-
-  console.log('[RabbitMQ] Conectado com sucesso!')
-
-  return { connection, channel }
 }
 
-/**
- * Consome uma fila no RabbitMQ
- * @param queue Nome da fila
- * @param onMessage Função para processar cada mensagem
- */
-export async function consumeQueue(queue: string, onMessage: (message: amqp.ConsumeMessage) => Promise<void>) {
-  const { channel } = await connectRabbitMQ()
+export async function createChannel(connection: Connection): Promise<Channel> {
+  try {
+    const channel = await connection.createChannel()
+    console.log('Channel created')
+    
+    await channel.assertQueue(QUEUE_NAME, { durable: true })
+    console.log(`Queue '${QUEUE_NAME}' is ready`)
+    
+    return channel
+  } catch (error) {
+    console.error('Failed to create a channel:', error)
+    throw new Error('Failed to create a channel')
+  }
+}
 
-  await channel.assertQueue(queue, {
-    durable: true,  // Garante que a fila persista se o RabbitMQ reiniciar
-  })
-
-  await channel.consume(queue, async (message) => {
-    if (!message) {
-      console.warn('[RabbitMQ] Mensagem nula recebida.')
-      return
+export function consumeQueue(channel: Channel, callback: (msg: Message | null) => void) {
+  channel.consume(QUEUE_NAME, (msg) => {
+    if (msg) {
+      console.log('Message received:', msg.content.toString())
+      callback(msg)
     }
-
-    try {
-      await onMessage(message)
-      channel.ack(message)  // Confirma que processamos a mensagem
-    } catch (error) {
-      console.error('[RabbitMQ] Erro ao processar mensagem:', error)
-      // Opcional: NACK com requeue
-      channel.nack(message, false, true)
-    }
+  }, {
+    noAck: false
   })
-
-  console.log(`[RabbitMQ] Consumindo fila: ${queue}`)
 }

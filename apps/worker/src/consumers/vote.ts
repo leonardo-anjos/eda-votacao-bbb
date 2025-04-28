@@ -1,18 +1,20 @@
 import amqp from 'amqplib'
 import { prisma } from '../lib/prisma'
+import { createConnection, createChannel, consumeQueue } from '../lib/rabbitmq'
 
-const queue = 'votes'
-const votesBuffer: { participant: string }[] = []  // buffer to store votes
-const BATCH_SIZE = process.env.BATCH_SIZE || 1  // number of votes to save at once
+const votesBuffer: { participant: string }[] = []
+const BATCH_SIZE = process.env.BATCH_SIZE || 10
+const CONCURRENCY = process.env.CONCURRENCY || 1
+const WORKERS = process.env.WORKERS || 1
 
+// Function to save votes in batches
 async function saveVotesBatch() {
   if (votesBuffer.length === 0) return
 
-  const votesToSave = [...votesBuffer]  // create a copy of the votes
-  votesBuffer.length = 0  // clear the buffer after saving
+  const votesToSave = [...votesBuffer]
+  votesBuffer.length = 0
 
   try {
-    // inset votes in batch
     await prisma.vote.createMany({
       data: votesToSave.map(vote => ({
         participant: vote.participant,
@@ -25,48 +27,45 @@ async function saveVotesBatch() {
   }
 }
 
+// Function to handle processing of each message
+async function processMessage(msg: amqp.Message) {
+  if (msg) {
+    try {
+      const data = JSON.parse(msg.content.toString())
+      votesBuffer.push({
+        participant: data.participant,
+      })
+
+      console.log(`Vote received for => ${data.participant}`)
+
+      if (votesBuffer.length >= BATCH_SIZE) {
+        await saveVotesBatch()
+      }
+
+      // Acknowledge the message after processing
+    } catch (error) {
+      console.error('Error processing message:', error)
+    }
+  }
+}
+
+// Function to start the worker and consume messages with concurrency control
 async function startWorker() {
-  const conn = await amqp.connect('amqp://localhost')
-  const channel = await conn.createChannel()
-  await channel.assertQueue(queue, { durable: true })
+  const connection = await createConnection()
+  const channel = await createChannel(connection)
 
   console.log('Worker started...')
 
-  channel.consume(queue, async (msg) => {
-    if (msg) {
-      try {
-        const data = JSON.parse(msg.content.toString())
-        votesBuffer.push({
-          participant: data.participant,
-        })
+  // Set the prefetch value to control how many messages a consumer will handle at once
+  channel.prefetch(+CONCURRENCY)
 
-        console.log(`Vote received for => ${data.participant}`)
-
-        if (votesBuffer.length >= BATCH_SIZE) {
-          await saveVotesBatch()
-        }
-
-        channel.ack(msg)
-      } catch (error) {
-        console.error('Error processing message:', error)
-        channel.nack(msg, false, false)
-      }
-    }
+  consumeQueue(channel, async (msg) => {
+    await processMessage(msg)  // Process each message
+    channel.ack(msg)  // Acknowledge the message after processing
   })
 }
 
-// start the worker
-startWorker().catch(console.error)
-
-// save any remaining votes when the process is terminated
-process.on('SIGINT', async () => {
-  console.log('Saving pending votes...')
-  await saveVotesBatch()
-  process.exit()
-})
-
-process.on('SIGTERM', async () => {
-  console.log('Saving pending votes...')
-  await saveVotesBatch()
-  process.exit()
-})
+// Start multiple workers in parallel
+for (let i = 0; i < +WORKERS; i++) {
+  startWorker().catch(console.error)  // Start 3 workers (adjust the number as needed)
+}
