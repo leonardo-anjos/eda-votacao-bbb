@@ -17,10 +17,11 @@
     "test:worker": "npm --workspace apps/worker run test",
     "build": "npm run build:api && npm run build:worker",
     "test": "npm run test:api && npm run test:worker",
-    "migrate:dev": "npx prisma migrate dev",
-    "migrate:prod": "npx prisma migrate deploy",
     "prisma:generate": "npx prisma generate",
-    "prisma:studio": "npx prisma studio"
+    "prisma:studio": "npx prisma studio",
+    "prisma:format": "npx prisma format",
+    "migrate:dev": "npx prisma migrate dev",
+    "migrate:prod": "npx prisma migrate deploy"
   },
   "dependencies": {
     "@prisma/client": "^6.6.0",
