@@ -17,4 +17,6 @@ model Vote {
   id          String   @id @default(uuid())
   participant String
   createdAt   DateTime @default(now())
+
+  @@index([participant]) // index
 }
