@@ -16,3 +16,7 @@ foco em alta performance, robustez, testes e boas práticas
 https://dev.to/zanfranceschi/desafio-sistema-de-votacao-bbb-50e3
 
 ![alt text](image.png)
+
+[melhorias](./doc/improvements.md)
+
+[roadmap](./doc/roadmap.md)
