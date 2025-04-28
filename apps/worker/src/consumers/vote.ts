@@ -1,5 +1,6 @@
 import amqp from 'amqplib';
-import { saveVote } from '../memory-store';
+
+import { prisma } from '../lib/prisma';
 
 const queue = 'votes';
 
@@ -12,10 +13,18 @@ async function startWorker() {
   channel.consume(queue, (msg) => {
     if (msg) {
       const data = JSON.parse(msg.content.toString());
-      saveVote(data.participant);
+      saveVoteToDb(data.participant);
       console.log(`1 vote for => ${data.participant}`);
       channel.ack(msg);
     }
+  });
+}
+
+async function saveVoteToDb(participant: string) {
+  await prisma.vote.create({
+    data: {
+      participant,
+    },
   });
 }
 
