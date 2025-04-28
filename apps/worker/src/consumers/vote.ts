@@ -7,7 +7,6 @@ const BATCH_SIZE = process.env.BATCH_SIZE || 10
 const CONCURRENCY = process.env.CONCURRENCY || 1
 const WORKERS = process.env.WORKERS || 1
 
-// Function to save votes in batches
 async function saveVotesBatch() {
   if (votesBuffer.length === 0) return
 
@@ -27,7 +26,6 @@ async function saveVotesBatch() {
   }
 }
 
-// Function to handle processing of each message
 async function processMessage(msg: amqp.Message) {
   if (msg) {
     try {
@@ -42,30 +40,27 @@ async function processMessage(msg: amqp.Message) {
         await saveVotesBatch()
       }
 
-      // Acknowledge the message after processing
     } catch (error) {
       console.error('Error processing message:', error)
     }
   }
 }
 
-// Function to start the worker and consume messages with concurrency control
 async function startWorker() {
   const connection = await createConnection()
   const channel = await createChannel(connection)
 
   console.log('Worker started...')
 
-  // Set the prefetch value to control how many messages a consumer will handle at once
   channel.prefetch(+CONCURRENCY)
 
   consumeQueue(channel, async (msg) => {
-    await processMessage(msg)  // Process each message
-    channel.ack(msg)  // Acknowledge the message after processing
+    await processMessage(msg)
+    channel.ack(msg)
   })
 }
 
-// Start multiple workers in parallel
+// start multiple workers in parallel
 for (let i = 0; i < +WORKERS; i++) {
-  startWorker().catch(console.error)  // Start 3 workers (adjust the number as needed)
+  startWorker().catch(console.error)
 }
