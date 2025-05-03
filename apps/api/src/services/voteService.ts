@@ -1,17 +1,7 @@
-import amqp from 'amqplib';
+import rabbitMQManager from '../../../../lib/rabbitmq';
 
-const queue = 'votes';
+const queue = process.env.RABBITMQ_QUEUE_NAME || 'votes';
 
 export async function sendVoteToQueue(participant: string) {
-  const conn = await amqp.connect('amqp://localhost');
-  const channel = await conn.createChannel();
-
-  await channel.assertQueue(queue, { durable: true });
-  channel.sendToQueue(queue, Buffer.from(JSON.stringify({ participant })), {
-    persistent: true,
-  });
-
-  setTimeout(() => {
-    conn.close();
-  }, 500);
+  await rabbitMQManager.enqueue(queue, { participant });
 }
